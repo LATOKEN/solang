@@ -143,7 +143,7 @@ fn resolve_hex_number_literal() {
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let loc = Loc::File(0, 3, 5);
     let expr = pt::YulExpression::HexNumberLiteral(
         loc,
@@ -194,7 +194,7 @@ fn resolve_hex_string_literal() {
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
 
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let loc = Loc::File(0, 3, 5);
     let expr = pt::YulExpression::HexStringLiteral(
         HexLiteral {
@@ -301,7 +301,7 @@ fn resolve_variable_local() {
     };
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let loc = Loc::File(1, 2, 3);
 
     let pos1 = symtable
@@ -379,7 +379,7 @@ fn resolve_variable_contract() {
     };
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let loc = Loc::File(0, 2, 3);
     let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
     contract.variables.push(Variable {
@@ -540,7 +540,7 @@ fn function_call() {
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     function_table.new_scope();
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let loc = Loc::File(0, 2, 3);
 
     let expr = pt::YulExpression::FunctionCall(Box::new(YulFunctionCall {
@@ -701,7 +701,7 @@ fn check_arguments() {
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
     function_table.new_scope();
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let loc = Loc::File(0, 2, 3);
 
     function_table.add_function_header(
@@ -772,7 +772,7 @@ fn check_arguments() {
     assert!(!ns.diagnostics.is_empty());
     assert_eq!(
         ns.diagnostics.iter().next().unwrap().message,
-        "builtin 'pop' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"
+        "builtin 'pop' is not available for target lachain. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"
     );
     ns.diagnostics = Diagnostics::default();
 
@@ -837,7 +837,7 @@ fn test_member_access() {
     };
     let mut symtable = Symtable::new();
     let mut function_table = FunctionsTable::new(0);
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let loc = Loc::File(0, 2, 3);
 
     let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
@@ -942,7 +942,7 @@ fn test_check_types() {
         yul_function: false,
     };
 
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
     let mut contract = ast::Contract::new("test", ContractTy::Contract(loc), vec![], loc);
     contract.variables.push(Variable {
         tags: vec![],
@@ -1626,7 +1626,7 @@ contract foo {
     let mut cache = FileResolver::new();
     cache.set_file_contents("test.sol", file.to_string());
 
-    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Ewasm);
+    let ns = parse_and_resolve(OsStr::new("test.sol"), &mut cache, Target::Lachain);
 
-    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target ewasm. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
+    assert!(ns.diagnostics.contains_message("builtin 'log0' is not available for target lachain. Please, open a GitHub issue at https://github.com/hyperledger-labs/solang/issues if there is need to support this function"));
 }

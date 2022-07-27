@@ -1,4 +1,4 @@
-// RUN: --target ewasm --emit cfg
+// RUN: --target lachain --emit cfg
 contract  Ownable  {
 
 // BEGIN-CHECK: Ownable::Ownable::function::_msgData

@@ -21,11 +21,11 @@ use crate::emit::ethabiencoder;
 use crate::emit::Generate;
 use crate::emit::{Binary, TargetRuntime, Variable};
 
-pub struct EwasmTarget {
+pub struct LachainTarget {
     abi: ethabiencoder::EthAbiDecoder,
 }
 
-impl EwasmTarget {
+impl LachainTarget {
     pub fn build<'a>(
         context: &'a Context,
         std_lib: &Module<'a>,
@@ -36,7 +36,7 @@ impl EwasmTarget {
         math_overflow_check: bool,
     ) -> Binary<'a> {
         // first emit runtime code
-        let mut b = EwasmTarget {
+        let mut b = LachainTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
         let mut runtime_code = Binary::new(
@@ -66,7 +66,7 @@ impl EwasmTarget {
         let runtime_bs = runtime_code.code(Generate::Linked).unwrap();
 
         // Now we have the runtime code, create the deployer
-        let mut b = EwasmTarget {
+        let mut b = LachainTarget {
             abi: ethabiencoder::EthAbiDecoder { bswap: false },
         };
         let mut deploy_code = Binary::new(
@@ -641,7 +641,7 @@ impl EwasmTarget {
         // init our storage vars
         binary.builder.build_call(initializer, &[], "");
 
-        // ewasm only allows one constructor, hence find()
+        // lachain only allows one constructor, hence find()
         if let Some((cfg_no, cfg)) = contract
             .cfg
             .iter()
@@ -788,7 +788,7 @@ impl EwasmTarget {
     }
 }
 
-impl<'a> TargetRuntime<'a> for EwasmTarget {
+impl<'a> TargetRuntime<'a> for LachainTarget {
     fn storage_delete_single_slot(
         &self,
         binary: &Binary,
@@ -1089,7 +1089,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
             .into_array_value()
     }
 
-    /// ewasm has no keccak256 host function, so call our implementation
+    /// lachain has no keccak256 host function, so call our implementation
     fn keccak256_hash(
         &self,
         binary: &Binary,
@@ -1201,7 +1201,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         binary.builder.build_unreachable();
     }
 
-    // ewasm main cannot return any value
+    // lachain main cannot return any value
     fn return_code<'b>(&self, binary: &'b Binary, _ret: IntValue<'b>) {
         self.assert_failure(
             binary,
@@ -1642,7 +1642,7 @@ impl<'a> TargetRuntime<'a> for EwasmTarget {
         v
     }
 
-    /// ewasm value is always 128 bits
+    /// lachain value is always 128 bits
     fn value_transferred<'b>(&self, binary: &Binary<'b>, ns: &ast::Namespace) -> IntValue<'b> {
         let value = binary
             .builder

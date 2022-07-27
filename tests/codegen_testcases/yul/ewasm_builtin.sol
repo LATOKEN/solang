@@ -1,4 +1,4 @@
-// RUN: --target ewasm --emit cfg -Onone --no-cse
+// RUN: --target lachain --emit cfg -Onone --no-cse
 
 contract Testing {
 

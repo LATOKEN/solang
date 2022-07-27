@@ -3126,7 +3126,7 @@ impl EthAbiDecoder {
 
         binary.builder.position_at_end(bail_block);
 
-        if ns.target == Target::Ewasm {
+        if ns.target == Target::Lachain {
             // TODO: should we pass in a panic message?
             binary.builder.build_call(
                 binary.module.get_function("revert").unwrap(),

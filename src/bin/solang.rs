@@ -24,7 +24,7 @@ mod doc;
 mod languageserver;
 
 #[derive(Serialize)]
-pub struct EwasmContract {
+pub struct LachainContract {
     pub wasm: String,
 }
 
@@ -32,7 +32,7 @@ pub struct EwasmContract {
 pub struct JsonContract {
     abi: Vec<abi::ethereum::ABI>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    ewasm: Option<EwasmContract>,
+    lachain: Option<LachainContract>,
     #[serde(skip_serializing_if = "Option::is_none")]
     minimum_space: Option<u32>,
 }
@@ -79,7 +79,7 @@ fn main() {
                 .help("Target to build for")
                 .long("target")
                 .takes_value(true)
-                .value_parser(["solana", "substrate", "ewasm"])
+                .value_parser(["solana", "substrate", "lachain"])
                 .required(true),
         )
         .arg(
@@ -198,7 +198,7 @@ fn main() {
             address_length: *address_length as usize,
             value_length: *value_length as usize,
         },
-        "ewasm" => solang::Target::Ewasm,
+        "lachain" => solang::Target::Lachain,
         _ => unreachable!(),
     };
 
@@ -515,7 +515,7 @@ fn process_file(
                     resolved_contract.name.to_owned(),
                     JsonContract {
                         abi: abi::ethereum::gen_abi(contract_no, &ns),
-                        ewasm: None,
+                        lachain: None,
                         minimum_space: Some(resolved_contract.fixed_layout_size.to_u32().unwrap()),
                     },
                 );
@@ -558,7 +558,7 @@ fn process_file(
                 binary.name.to_owned(),
                 JsonContract {
                     abi: abi::ethereum::gen_abi(contract_no, &ns),
-                    ewasm: Some(EwasmContract {
+                    lachain: Some(LachainContract {
                         wasm: hex::encode_upper(&resolved_contract.code),
                     }),
                     minimum_space: None,
@@ -607,7 +607,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
     match matches.get_one::<String>("EMIT").map(|v| v.as_str()) {
         Some("llvm-ir") => {
             if let Some(runtime) = &binary.runtime {
-                // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
+                // In Lachain, an lachain contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
                 // as a byte string
                 let llvm_filename = output_file(matches, &format!("{}_deploy", binary.name), "ll");
 
@@ -650,7 +650,7 @@ fn save_intermediates(binary: &solang::emit::binary::Binary, matches: &ArgMatche
         }
 
         Some("llvm-bc") => {
-            // In Ethereum, an ewasm contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
+            // In Lachain, an lachain contract has two parts, deployer and runtime. The deployer code returns the runtime wasm
             // as a byte string
             if let Some(runtime) = &binary.runtime {
                 let bc_filename = output_file(matches, &format!("{}_deploy", binary.name), "bc");

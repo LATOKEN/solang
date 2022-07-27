@@ -15,7 +15,7 @@ impl YulBuiltinPrototype {
     /// Checks if a certain Yul builtin is available for the given target
     pub fn is_available(&self, target: &Target) -> bool {
         match target {
-            Target::Ewasm => self.availability[0],
+            Target::Lachain => self.availability[0],
             Target::Substrate { .. } => self.availability[1],
             Target::Solana => self.availability[2],
         }

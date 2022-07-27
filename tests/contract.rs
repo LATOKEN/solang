@@ -21,8 +21,8 @@ fn substrate_contracts() -> io::Result<()> {
 }
 
 #[test]
-fn ewasm_contracts() -> io::Result<()> {
-    contract_tests("tests/contract_testcases/ewasm", Target::Ewasm)
+fn lachain_contracts() -> io::Result<()> {
+    contract_tests("tests/contract_testcases/lachain", Target::Lachain)
 }
 
 fn contract_tests(file_path: &str, target: Target) -> io::Result<()> {

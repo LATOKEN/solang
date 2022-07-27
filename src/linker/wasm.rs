@@ -29,7 +29,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
     ];
 
     match target {
-        Target::Ewasm => {
+        Target::Lachain => {
             command_line.push(CString::new("--export").unwrap());
             command_line.push(CString::new("main").unwrap());
         }
@@ -77,7 +77,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
 
         while ind < imports.len() {
             match target {
-                Target::Ewasm => {
+                Target::Lachain => {
                     let module_name = if imports[ind].field().starts_with("print") {
                         "debug"
                     } else {

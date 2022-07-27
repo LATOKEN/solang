@@ -456,7 +456,7 @@ pub fn contract_function(
 
     if func.ty == pt::FunctionTy::Constructor {
         // In the eth solidity, only one constructor is allowed
-        if ns.target == Target::Ewasm {
+        if ns.target == Target::Lachain {
             if let Some(prev_func_no) = ns.contracts[contract_no]
                 .functions
                 .iter()
@@ -1024,7 +1024,7 @@ pub fn resolve_returns(
 fn signatures() {
     use super::*;
 
-    let mut ns = Namespace::new(Target::Ewasm);
+    let mut ns = Namespace::new(Target::Lachain);
 
     ns.contracts.push(ast::Contract::new(
         "bar",

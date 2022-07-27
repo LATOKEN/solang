@@ -1,4 +1,4 @@
-// RUN: --target ewasm --emit cfg
+// RUN: --target lachain --emit cfg
 
 contract CodeWithJD {
     mapping(address => uint256) balances;

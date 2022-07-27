@@ -9,7 +9,7 @@ use num_traits::ToPrimitive;
 use std::collections::HashMap;
 
 use crate::emit::substrate;
-use crate::emit::{ewasm, solana, BinaryOp, Generate, ReturnCode};
+use crate::emit::{lachain, solana, BinaryOp, Generate, ReturnCode};
 use crate::linker::link;
 use crate::Target;
 use inkwell::builder::Builder;
@@ -73,7 +73,7 @@ impl<'a> Binary<'a> {
                 opt,
                 math_overflow_check,
             ),
-            Target::Ewasm => ewasm::EwasmTarget::build(
+            Target::Lachain => lachain::LachainTarget::build(
                 context,
                 &std_lib,
                 contract,
@@ -153,12 +153,12 @@ impl<'a> Binary<'a> {
             .unwrap();
 
         loop {
-            // we need to loop here to support ewasm deployer. It needs to know the size
+            // we need to loop here to support lachain deployer. It needs to know the size
             // of itself. Note that in webassembly, the constants are LEB128 encoded so
             // patching the length might actually change the length. So we need to loop
             // until it is right.
 
-            // The correct solution is to make ewasm less insane.
+            // The correct solution is to make lachain less insane.
             match target_machine.write_to_memory_buffer(
                 &self.module,
                 if generate == Generate::Assembly {
@@ -882,7 +882,7 @@ impl<'a> Binary<'a> {
         }
     }
 
-    /// ewasm deployer needs to know what its own code size is, so we compile once to
+    /// lachain deployer needs to know what its own code size is, so we compile once to
     /// get the size, patch in the value and then recompile.
     fn patch_code_size(&self, code_size: u64) -> bool {
         let current_size = {

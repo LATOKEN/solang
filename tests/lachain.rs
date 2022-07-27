@@ -13,7 +13,7 @@ use wasmi::*;
 
 use solang::{compile, file_resolver::FileResolver, Target};
 
-mod ewasm_tests;
+mod lachain_tests;
 
 type Address = [u8; 20];
 
@@ -295,7 +295,7 @@ impl Externals for TestRuntime {
                 let addr = address_new();
                 println!("create address: {}", hex::encode(&addr));
 
-                // when ewasm creates a contract, the abi encoded args are concatenated to the
+                // when lachain creates a contract, the abi encoded args are concatenated to the
                 // code. So, find which code is was and use that instead. Otherwise, the
                 // wasm validator will trip
                 let code = self
@@ -399,7 +399,7 @@ impl Externals for TestRuntime {
                     }
                 }
 
-                // when ewasm creates a contract, the abi encoded args are concatenated to the
+                // when lachain creates a contract, the abi encoded args are concatenated to the
                 // code. So, find which code is was and use that instead. Otherwise, the
                 // wasm validator will trip
                 let (code, _) = self.accounts.get(&addr).unwrap().clone();
@@ -836,7 +836,7 @@ fn build_solidity(src: &str) -> TestRuntime {
         OsStr::new("test.sol"),
         &mut cache,
         inkwell::OptimizationLevel::Default,
-        Target::Ewasm,
+        Target::Lachain,
         false,
     );
 

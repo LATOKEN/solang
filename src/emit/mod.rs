@@ -27,7 +27,7 @@ use inkwell::IntPredicate;
 
 pub mod binary;
 mod ethabiencoder;
-pub mod ewasm;
+pub mod lachain;
 mod loop_builder;
 pub mod solana;
 pub mod substrate;
@@ -975,7 +975,7 @@ pub trait TargetRuntime<'a> {
                     dest.into_pointer_value()
                 };
 
-                // TODO ewasm allocates 32 bytes here, even though we have just
+                // TODO lachain allocates 32 bytes here, even though we have just
                 // allocated test. This can be folded into one allocation, if llvm
                 // does not already fold it into one.
                 self.set_storage(bin, function, slot_ptr, dest);
