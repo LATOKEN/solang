@@ -61,7 +61,7 @@ impl LachainTarget {
 
         b.function_dispatch(&runtime_code, contract, ns);
 
-        runtime_code.internalize(&["main"]);
+        runtime_code.internalize(&["start"]);
 
         let runtime_bs = runtime_code.code(Generate::Linked).unwrap();
 
@@ -93,37 +93,46 @@ impl LachainTarget {
         b.deployer_dispatch(&mut deploy_code, contract, &runtime_bs, ns);
 
         deploy_code.internalize(&[
-            "main",
-            "getCallDataSize",
-            "callDataCopy",
-            "storageStore",
-            "storageLoad",
-            "finish",
-            "revert",
-            "codeCopy",
-            "getCodeSize",
-            "printMem",
-            "call",
-            "callStatic",
-            "callDelegate",
+            "start",
+            "get_extcodesize",
+            "save_storage",
+            "load_storage",
+            "save_storage_string",
+            "load_storage_string",
+            "get_storage_string_size",
+            "get_call_size",
+            "get_code_size",
+            "get_return_size",
+            "copy_call_value",
+            "copy_code_value",
+            "copy_return_value",
+            "invoke_contract",
+            "invoke_static_contract",
+            "invoke_delegate_contract",
+            "transfer",
+            "get_msgvalue",
+            "get_address",
+            "get_sender",
+            "get_external_balance",
+            "get_gas_left",
+            "get_tx_gas_price",
+            "get_tx_origin",
+            "get_block_number",
+            "get_block_hash",
+            "get_block_gas_limit",
+            "get_block_difficulty",
+            "get_block_coinbase_address",
+            "get_block_timestamp",
+            "get_chain_id",
             "create",
-            "getReturnDataSize",
-            "returnDataCopy",
-            "getCallValue",
-            "getAddress",
-            "getExternalBalance",
-            "getBlockHash",
-            "getBlockDifficulty",
-            "getGasLeft",
-            "getBlockGasLimit",
-            "getBlockTimestamp",
-            "getBlockNumber",
-            "getTxGasPrice",
-            "getTxOrigin",
-            "getBlockCoinbase",
-            "getCaller",
-            "log",
-            "getExternalCodeSize",
+            "create2",
+            "write_log",
+            "set_return",
+            "crypto_keccak256",
+            "crypto_ripemd160",
+            "crypto_sha256",
+            "crypto_recover",
+            "system_halt",
         ]);
 
         deploy_code
@@ -153,7 +162,7 @@ impl LachainTarget {
         let args_length = binary
             .builder
             .build_call(
-                binary.module.get_function("getCallDataSize").unwrap(),
+                binary.module.get_function("get_call_size").unwrap(),
                 &[],
                 "calldatasize",
             )
@@ -183,7 +192,7 @@ impl LachainTarget {
             .build_store(binary.calldata_data.as_pointer_value(), args);
 
         binary.builder.build_call(
-            binary.module.get_function("callDataCopy").unwrap(),
+            binary.module.get_function("copy_call_value").unwrap(),
             &[
                 args.into(),
                 binary.context.i32_type().const_zero().into(),
@@ -229,7 +238,7 @@ impl LachainTarget {
             binary
                 .builder
                 .build_call(
-                    binary.module.get_function("getCodeSize").unwrap(),
+                    binary.module.get_function("get_code_size").unwrap(),
                     &[],
                     "codesize",
                 )
@@ -262,7 +271,7 @@ impl LachainTarget {
             .build_store(binary.calldata_data.as_pointer_value(), args);
 
         binary.builder.build_call(
-            binary.module.get_function("codeCopy").unwrap(),
+            binary.module.get_function("copy_code_value").unwrap(),
             &[args.into(), code_size.into(), args_length.into()],
             "",
         );
@@ -281,38 +290,98 @@ impl LachainTarget {
     fn declare_externals(&self, binary: &mut Binary) {
         let u8_ptr_ty = binary.context.i8_type().ptr_type(AddressSpace::Generic);
         let u32_ty = binary.context.i32_type();
-        let u64_ty = binary.context.i64_type();
         let void_ty = binary.context.void_type();
 
         let ftype = void_ty.fn_type(&[u8_ptr_ty.into(), u8_ptr_ty.into()], false);
 
+        binary.module.add_function(
+            "get_extcodesize",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // addressOffset
+                    u8_ptr_ty.into(), // resultOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
         binary
             .module
-            .add_function("storageStore", ftype, Some(Linkage::External));
+            .add_function("save_storage", ftype, Some(Linkage::External));
         binary
             .module
-            .add_function("storageLoad", ftype, Some(Linkage::External));
+            .add_function("load_storage", ftype, Some(Linkage::External));
 
         binary.module.add_function(
-            "getCallDataSize",
+            "save_storage_string",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // keyOffset
+                    u8_ptr_ty.into(), // valueOffset
+                    u32_ty.into(),    // valueLength
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "load_storage_string",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // keyOffset
+                    u8_ptr_ty.into(), // resultOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_storage_string_size",
+            u32_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // keyOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_call_size",
             u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
         binary.module.add_function(
-            "getCodeSize",
+            "get_code_size",
             u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
         binary.module.add_function(
-            "getReturnDataSize",
+            "get_return_size",
             u32_ty.fn_type(&[], false),
             Some(Linkage::External),
         );
 
         binary.module.add_function(
-            "callDataCopy",
+            "copy_call_value",
+            void_ty.fn_type(
+                &[
+                    u32_ty.into(),    // from
+                    u32_ty.into(),    // to
+                    u8_ptr_ty.into(), // offset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "copy_code_value",
             void_ty.fn_type(
                 &[
                     u8_ptr_ty.into(), // resultOffset
@@ -325,7 +394,7 @@ impl LachainTarget {
         );
 
         binary.module.add_function(
-            "codeCopy",
+            "copy_return_value",
             void_ty.fn_type(
                 &[
                     u8_ptr_ty.into(), // resultOffset
@@ -338,12 +407,14 @@ impl LachainTarget {
         );
 
         binary.module.add_function(
-            "returnDataCopy",
-            void_ty.fn_type(
+            "invoke_contract",
+            u32_ty.fn_type(
                 &[
-                    u8_ptr_ty.into(), // resultOffset
-                    u32_ty.into(),    // dataOffset
-                    u32_ty.into(),    // length
+                    u8_ptr_ty.into(), // callSignatureOffset
+                    u32_ty.into(),    // inputLength
+                    u8_ptr_ty.into(), // inputOffset
+                    u8_ptr_ty.into(), // valueOffset
+                    u8_ptr_ty.into(), // gasOffset
                 ],
                 false,
             ),
@@ -351,11 +422,197 @@ impl LachainTarget {
         );
 
         binary.module.add_function(
-            "printMem",
+            "invoke_static_contract",
+            u32_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // callSignatureOffset
+                    u32_ty.into(),    // inputLength
+                    u8_ptr_ty.into(), // inputOffset
+                    u8_ptr_ty.into(), // valueOffset
+                    u8_ptr_ty.into(), // gasOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "invoke_delegate_contract",
+            u32_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // callSignatureOffset
+                    u32_ty.into(),    // inputLength
+                    u8_ptr_ty.into(), // inputOffset
+                    u8_ptr_ty.into(), // valueOffset
+                    u8_ptr_ty.into(), // gasOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "transfer",
+            u32_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // callSignatureOffset
+                    u8_ptr_ty.into(), // valueOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_msgvalue",
             void_ty.fn_type(
                 &[
-                    u8_ptr_ty.into(), // string_ptr
-                    u32_ty.into(),    // string_length
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_address",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // resultOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_sender",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_external_balance",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // addressOffset
+                    u8_ptr_ty.into(), // resultOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_gas_left",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_tx_gas_price",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_tx_origin",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_block_number",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_block_hash",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // numberOffset
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_block_gas_limit",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_block_difficulty",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_block_coinbase_address",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_block_timestamp",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "get_chain_id",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
                 ],
                 false,
             ),
@@ -367,9 +624,9 @@ impl LachainTarget {
             u32_ty.fn_type(
                 &[
                     u8_ptr_ty.into(), // valueOffset
-                    u8_ptr_ty.into(), // input offset
-                    u32_ty.into(),    // input length
-                    u8_ptr_ty.into(), // address result
+                    u8_ptr_ty.into(), // dataOffset
+                    u32_ty.into(),    // dataLength 
+                    u8_ptr_ty.into(), // resultOffset
                 ],
                 false,
             ),
@@ -377,50 +634,14 @@ impl LachainTarget {
         );
 
         binary.module.add_function(
-            "call",
+            "create2",
             u32_ty.fn_type(
                 &[
-                    u64_ty.into(),    // gas
-                    u8_ptr_ty.into(), // address
                     u8_ptr_ty.into(), // valueOffset
-                    u8_ptr_ty.into(), // input offset
-                    u32_ty.into(),    // input length
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-        binary.module.add_function(
-            "callStatic",
-            u32_ty.fn_type(
-                &[
-                    u64_ty.into(),    // gas
-                    u8_ptr_ty.into(), // address
-                    u8_ptr_ty.into(), // input offset
-                    u32_ty.into(),    // input length
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-        binary.module.add_function(
-            "callDelegate",
-            u32_ty.fn_type(
-                &[
-                    u64_ty.into(),    // gas
-                    u8_ptr_ty.into(), // address
-                    u8_ptr_ty.into(), // input offset
-                    u32_ty.into(),    // input length
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-        binary.module.add_function(
-            "getCallValue",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // value_ptr
+                    u8_ptr_ty.into(), // dataOffset
+                    u32_ty.into(),    // dataLength 
+                    u8_ptr_ty.into(), // saltOffset
+                    u8_ptr_ty.into(), // resultOffset
                 ],
                 false,
             ),
@@ -428,121 +649,7 @@ impl LachainTarget {
         );
 
         binary.module.add_function(
-            "getAddress",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // value_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getCaller",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // value_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getExternalBalance",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // address_ptr
-                    u8_ptr_ty.into(), // balance_ptr
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getBlockHash",
-            u32_ty.fn_type(
-                &[
-                    u64_ty.into(),    // block number
-                    u8_ptr_ty.into(), // hash_ptr result
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getBlockCoinbase",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // address_ptr result
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getBlockDifficulty",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // u256_ptr result
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getGasLeft",
-            u64_ty.fn_type(&[], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getBlockGasLimit",
-            u64_ty.fn_type(&[], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getBlockTimestamp",
-            u64_ty.fn_type(&[], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getBlockNumber",
-            u64_ty.fn_type(&[], false),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getTxGasPrice",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // value_ptr result
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "getTxOrigin",
-            void_ty.fn_type(
-                &[
-                    u8_ptr_ty.into(), // address_ptr result
-                ],
-                false,
-            ),
-            Some(Linkage::External),
-        );
-
-        binary.module.add_function(
-            "log",
+            "write_log",
             void_ty.fn_type(
                 &[
                     u8_ptr_ty.into(), // data_ptr result
@@ -559,10 +666,65 @@ impl LachainTarget {
         );
 
         binary.module.add_function(
-            "getExternalCodeSize",
-            u32_ty.fn_type(
+            "set_return",
+            void_ty.fn_type(
                 &[
-                    u8_ptr_ty.into(), // address_ptr
+                    u8_ptr_ty.into(), // offset
+                    u32_ty.into(),    // length
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "crypto_keccak256",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                    u32_ty.into(),    // dataLength
+                    u8_ptr_ty.into(), // resultOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "crypto_ripemd160",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                    u32_ty.into(),    // dataLength
+                    u8_ptr_ty.into(), // resultOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "crypto_sha256",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // dataOffset
+                    u32_ty.into(),    // dataLength
+                    u8_ptr_ty.into(), // resultOffset
+                ],
+                false,
+            ),
+            Some(Linkage::External),
+        );
+
+        binary.module.add_function(
+            "crypto_recover",
+            void_ty.fn_type(
+                &[
+                    u8_ptr_ty.into(), // hashOffset
+                    u32_ty.into(),    // v
+                    u8_ptr_ty.into(), // rOffset
+                    u8_ptr_ty.into(), // sOffset
+                    u8_ptr_ty.into(), // resultOffset
                 ],
                 false,
             ),
@@ -577,42 +739,10 @@ impl LachainTarget {
         binary
             .module
             .add_function(
-                "finish",
+                "system_halt",
                 void_ty.fn_type(
                     &[
-                        u8_ptr_ty.into(), // data_ptr
-                        u32_ty.into(),    // data_len
-                    ],
-                    false,
-                ),
-                Some(Linkage::External),
-            )
-            .add_attribute(AttributeLoc::Function, noreturn);
-
-        // mark as noreturn
-        binary
-            .module
-            .add_function(
-                "revert",
-                void_ty.fn_type(
-                    &[
-                        u8_ptr_ty.into(), // data_ptr
-                        u32_ty.into(),    // data_len
-                    ],
-                    false,
-                ),
-                Some(Linkage::External),
-            )
-            .add_attribute(AttributeLoc::Function, noreturn);
-
-        // mark as noreturn
-        binary
-            .module
-            .add_function(
-                "selfDestruct",
-                void_ty.fn_type(
-                    &[
-                        u8_ptr_ty.into(), // address_ptr
+                        u32_ty.into(),    // haltCode
                     ],
                     false,
                 ),
@@ -672,7 +802,7 @@ impl LachainTarget {
         let runtime_code = binary.emit_global_string("runtime_code", runtime, true);
 
         binary.builder.build_call(
-            binary.module.get_function("finish").unwrap(),
+            binary.module.get_function("set_return").unwrap(),
             &[
                 runtime_code.into(),
                 binary
@@ -681,6 +811,12 @@ impl LachainTarget {
                     .const_int(runtime.len() as u64, false)
                     .into(),
             ],
+            "",
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("system_halt").unwrap(),
+            &[binary.context.i32_type().const_zero().into()],
             "",
         );
 
@@ -698,7 +834,7 @@ impl LachainTarget {
         // create start function
         let ret = binary.context.void_type();
         let ftype = ret.fn_type(&[], false);
-        let function = binary.module.add_function("main", ftype, None);
+        let function = binary.module.add_function("start", ftype, None);
 
         let (argsdata, argslen) = self.runtime_prelude(binary, function, ns);
 
@@ -815,7 +951,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         );
 
         binary.builder.build_call(
-            binary.module.get_function("storageStore").unwrap(),
+            binary.module.get_function("save_storage").unwrap(),
             &[
                 binary
                     .builder
@@ -838,7 +974,32 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         _slot: PointerValue<'a>,
         _dest: BasicValueEnum<'a>,
     ) {
-        unimplemented!();
+        let len = binary.vector_len(dest);
+        let data = binary.vector_bytes(dest);
+
+        binary.builder.build_call(
+            binary.module.get_function("save_storage_string").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        data,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                len.into(),
+            ],
+            "",
+        );
     }
 
     fn get_storage_string(
@@ -847,8 +1008,122 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         _function: FunctionValue,
         _slot: PointerValue,
     ) -> PointerValue<'a> {
-        unimplemented!();
+        let length = binary
+            .builder
+            .build_call(
+                binary.module.get_function("get_storage_string_size").unwrap(),
+                &[binary
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into()],
+                "storagestringsize",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
+
+        let malloc_length = binary.builder.build_int_add(
+            length,
+            binary
+                .module
+                .get_struct_type("struct.vector")
+                .unwrap()
+                .size_of()
+                .unwrap()
+                .const_cast(binary.context.i32_type(), false),
+            "size",
+        );
+
+        let p = binary
+            .builder
+            .build_call(
+                binary.module.get_function("__malloc").unwrap(),
+                &[malloc_length.into()],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_pointer_value();
+
+        let v = binary.builder.build_pointer_cast(
+            p,
+            binary
+                .module
+                .get_struct_type("struct.vector")
+                .unwrap()
+                .ptr_type(AddressSpace::Generic),
+            "string",
+        );
+
+        let string_len = unsafe {
+            binary.builder.build_gep(
+                v,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_zero(),
+                ],
+                "string_len",
+            )
+        };
+
+        binary.builder.build_store(string_len, length);
+
+        let string_size = unsafe {
+            binary.builder.build_gep(
+                v,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(1, false),
+                ],
+                "string_size",
+            )
+        };
+
+        binary.builder.build_store(string_size, length);
+
+        let string = unsafe {
+            binary.builder.build_gep(
+                v,
+                &[
+                    binary.context.i32_type().const_zero(),
+                    binary.context.i32_type().const_int(2, false),
+                ],
+                "string",
+            )
+        };
+
+        binary.builder.build_call(
+            binary.module.get_function("load_storage_string").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        slot,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        string,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+            ],
+            "",
+        );
+
+        v
     }
+
     fn set_storage_extfunc(
         &self,
         _binary: &Binary,
@@ -925,7 +1200,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                 == 256
         {
             binary.builder.build_call(
-                binary.module.get_function("storageStore").unwrap(),
+                binary.module.get_function("save_storage").unwrap(),
                 &[
                     binary
                         .builder
@@ -976,7 +1251,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             );
 
             binary.builder.build_call(
-                binary.module.get_function("storageStore").unwrap(),
+                binary.module.get_function("save_storage").unwrap(),
                 &[
                     binary
                         .builder
@@ -1007,7 +1282,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         );
 
         binary.builder.build_call(
-            binary.module.get_function("storageLoad").unwrap(),
+            binary.module.get_function("load_storage").unwrap(),
             &[
                 binary
                     .builder
@@ -1054,7 +1329,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         );
 
         binary.builder.build_call(
-            binary.module.get_function("storageLoad").unwrap(),
+            binary.module.get_function("load_storage").unwrap(),
             &[
                 binary
                     .builder
@@ -1098,62 +1373,18 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         dest: PointerValue,
         ns: &ast::Namespace,
     ) {
-        let balance = binary
-            .builder
-            .build_alloca(binary.value_type(ns), "balance");
-
-        binary
-            .builder
-            .build_store(balance, binary.value_type(ns).const_zero());
-
-        let keccak256_pre_compile_address: [u8; 20] =
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20];
-
-        let address =
-            binary.emit_global_string("keccak256_precompile", &keccak256_pre_compile_address, true);
-
         binary.builder.build_call(
-            binary.module.get_function("call").unwrap(),
+            binary.module.get_function("crypto_keccak256").unwrap(),
             &[
-                binary
-                    .context
-                    .i64_type()
-                    .const_int(i64::MAX as u64, false)
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "address",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        balance,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "balance",
-                    )
-                    .into(),
                 binary
                     .builder
                     .build_pointer_cast(
                         src,
                         binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "source",
+                        "src",
                     )
                     .into(),
                 length.into(),
-            ],
-            "",
-        );
-
-        // We're not checking return value or returnDataSize;
-        // assuming precompiles always succeed
-        binary.builder.build_call(
-            binary.module.get_function("returnDataCopy").unwrap(),
-            &[
                 binary
                     .builder
                     .build_pointer_cast(
@@ -1162,8 +1393,6 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                         "dest",
                     )
                     .into(),
-                binary.context.i32_type().const_zero().into(),
-                binary.context.i32_type().const_int(32, false).into(),
             ],
             "",
         );
@@ -1171,7 +1400,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
     fn return_empty_abi(&self, binary: &Binary) {
         binary.builder.build_call(
-            binary.module.get_function("finish").unwrap(),
+            binary.module.get_function("set_return").unwrap(),
             &[
                 binary
                     .context
@@ -1184,6 +1413,12 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             "",
         );
 
+        binary.builder.build_call(
+            binary.module.get_function("system_halt").unwrap(),
+            &[binary.context.i32_type().const_zero().into()],
+            "",
+        );
+
         // since finish is marked noreturn, this should be optimized away
         // however it is needed to create valid LLVM IR
         binary.builder.build_unreachable();
@@ -1191,8 +1426,14 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
     fn return_abi<'b>(&self, binary: &'b Binary, data: PointerValue<'b>, length: IntValue) {
         binary.builder.build_call(
-            binary.module.get_function("finish").unwrap(),
+            binary.module.get_function("set_return").unwrap(),
             &[data.into(), length.into()],
+            "",
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("system_halt").unwrap(),
+            &[binary.context.i32_type().const_zero().into()],
             "",
         );
 
@@ -1216,8 +1457,14 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
     fn assert_failure<'b>(&self, binary: &'b Binary, data: PointerValue, len: IntValue) {
         binary.builder.build_call(
-            binary.module.get_function("revert").unwrap(),
+            binary.module.get_function("set_return").unwrap(),
             &[data.into(), len.into()],
+            "",
+        );
+
+        binary.builder.build_call(
+            binary.module.get_function("system_halt").unwrap(),
+            &[binary.context.i32_type().const_int(1, false).into()],
             "",
         );
 
@@ -1341,7 +1588,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             ns,
         );
 
-        // value is a u128
+        // value is a u256
         let value_ptr = binary
             .builder
             .build_alloca(binary.value_type(ns), "balance");
@@ -1354,37 +1601,119 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             },
         );
 
-        // call create
-        let ret = binary
+        let result = binary
             .builder
-            .build_call(
-                binary.module.get_function("create").unwrap(),
-                &[
-                    binary
-                        .builder
-                        .build_pointer_cast(
-                            value_ptr,
-                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "value_transfer",
-                        )
-                        .into(),
-                    input.into(),
-                    input_len.into(),
-                    binary
-                        .builder
-                        .build_pointer_cast(
-                            address,
-                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "address",
-                        )
-                        .into(),
-                ],
-                "",
-            )
-            .try_as_basic_value()
-            .left()
-            .unwrap()
-            .into_int_value();
+            .build_alloca(binary.address_type(ns), "result");
+
+        let ret = binary.context.i32_type().const_zero();
+        if let Some(salt) = salt {
+            // salt is a u256
+            let salt_ptr = binary
+                .builder
+                .build_alloca(binary.value_type(ns), "salt");
+            binary.builder.build_store(salt_ptr, salt);
+
+            // call create2
+            binary
+                .builder
+                .build_call(
+                    binary.module.get_function("create2").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                value_ptr,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "value_transfer",
+                            )
+                            .into(),
+                        input.into(),
+                        input_len.into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                salt_ptr,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "salt",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+        } else {
+            // call create
+            binary
+                .builder
+                .build_call(
+                    binary.module.get_function("create").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                value_ptr,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "value_transfer",
+                            )
+                            .into(),
+                        input.into(),
+                        input_len.into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into(),
+                    ],
+                    "",
+                )
+                .try_as_basic_value()
+                .left()
+                .unwrap()
+                .into_int_value();
+        }
+
+        // decode result
+        binary.builder.build_call(
+            binary.module.get_function("__beNtoleN").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        result,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "result",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        address,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "address",
+                    )
+                    .into(),
+                binary
+                    .context
+                    .i32_type()
+                    .const_int(ns.address_length as u64, false)
+                    .into(),
+            ],
+            "",
+        );
 
         let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -1432,79 +1761,130 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         callty: ast::CallTy,
         ns: &ast::Namespace,
     ) {
-        let ret = if callty == ast::CallTy::Regular {
-            // needs value
+        let ret;
 
-            // value is a u128
-            let value_ptr = binary
-                .builder
-                .build_alloca(binary.value_type(ns), "balance");
-            binary.builder.build_store(value_ptr, value);
+        // value is a u256
+        let value_be_ptr = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
+        binary.builder.build_store(value_be_ptr, value);
+        
+        let value_le_ptr = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
+        let type_size = binary.value_type(ns).size_of();
 
-            // call create
-            binary
-                .builder
-                .build_call(
-                    binary.module.get_function("call").unwrap(),
-                    &[
-                        gas.into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                address.unwrap(),
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                value_ptr,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "value_transfer",
-                            )
-                            .into(),
-                        payload.into(),
-                        payload_len.into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value()
-        } else {
-            binary
-                .builder
-                .build_call(
+        binary.builder.build_call(
+            binary.module.get_function("__be32toleN").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        value_be_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        value_le_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_int_truncate(type_size, binary.context.i32_type(), "size")
+                    .into(),
+            ],
+            "",
+        );
+
+        // encode address
+        let address_r = binary
+            .builder
+            .build_alloca(binary.address_type(ns), "address_r");
+
+        binary.builder.build_call(
+            binary.module.get_function("__leNtobeN").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        address.unwrap(),
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "address",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        address_r,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "address_r",
+                    )
+                    .into(),
+                binary
+                    .context
+                    .i32_type()
+                    .const_int(ns.address_length as u64, false)
+                    .into(),
+            ],
+            "",
+        );
+
+        // gas is a u64
+        let gas_ptr = binary
+            .builder
+            .build_alloca(binary.context.i64_type(), "gas");
+        binary.builder.build_store(gas_ptr, gas);
+
+        ret = binary
+            .builder
+            .build_call(
+                binary
+                    .module
+                    .get_function(match callty {
+                        ast::CallTy::Regular => "invoke_contract",
+                        ast::CallTy::Static => "invoke_static_contract",
+                        ast::CallTy::Delegate => "invoke_delegate_contract",
+                    })
+                    .unwrap(),
+                &[
                     binary
-                        .module
-                        .get_function(match callty {
-                            ast::CallTy::Regular => "call",
-                            ast::CallTy::Static => "callStatic",
-                            ast::CallTy::Delegate => "callDelegate",
-                        })
-                        .unwrap(),
-                    &[
-                        gas.into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                address.unwrap(),
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            )
-                            .into(),
-                        payload.into(),
-                        payload_len.into(),
-                    ],
-                    "",
-                )
-                .try_as_basic_value()
-                .left()
-                .unwrap()
-                .into_int_value()
-        };
+                        .builder
+                        .build_pointer_cast(
+                            address_r,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "address_r",
+                        )
+                        .into(),
+                    payload_len.into(),
+                    payload.into(),
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            value_le_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "value_transfer",
+                        )
+                        .into(),
+                    binary
+                        .builder
+                        .build_pointer_cast(
+                            gas_ptr,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "gas_transfer",
+                        )
+                        .into(),
+                ],
+                "",
+            )
+            .try_as_basic_value()
+            .left()
+            .unwrap()
+            .into_int_value();
 
         let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -1542,7 +1922,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         let length = binary
             .builder
             .build_call(
-                binary.module.get_function("getReturnDataSize").unwrap(),
+                binary.module.get_function("get_return_size").unwrap(),
                 &[],
                 "returndatasize",
             )
@@ -1623,7 +2003,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         };
 
         binary.builder.build_call(
-            binary.module.get_function("returnDataCopy").unwrap(),
+            binary.module.get_function("copy_return_value").unwrap(),
             &[
                 binary
                     .builder
@@ -1649,7 +2029,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             .build_alloca(binary.value_type(ns), "value_transferred");
 
         binary.builder.build_call(
-            binary.module.get_function("getCallValue").unwrap(),
+            binary.module.get_function("get_msgvalue").unwrap(),
             &[binary
                 .builder
                 .build_pointer_cast(
@@ -1701,21 +2081,10 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         input_len: IntValue<'b>,
         ns: &ast::Namespace,
     ) -> IntValue<'b> {
-        let (precompile, hashlen) = match hash {
-            HashTy::Keccak256 => (
-                [
-                    0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20,
-                ],
-                32,
-            ),
-            HashTy::Ripemd160 => (
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-                20,
-            ),
-            HashTy::Sha256 => (
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
-                32,
-            ),
+        let (hash_name, hashlen) = match hash {
+            HashTy::Keccak256 => ("crypto_keccak256", 32),
+            HashTy::Ripemd160 => ("crypto_ripemd160", 20),
+            HashTy::Sha256 => ("crypto_sha256", 32),
             _ => unreachable!(),
         };
 
@@ -1725,55 +2094,12 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             "res",
         );
 
-        let balance = binary
-            .builder
-            .build_alloca(binary.value_type(ns), "balance");
-
-        binary
-            .builder
-            .build_store(balance, binary.value_type(ns).const_zero());
-
-        let address = binary.emit_global_string("precompile", &precompile, true);
-
         binary.builder.build_call(
-            binary.module.get_function("call").unwrap(),
+            binary.module.get_function(hash_name).unwrap(),
             &[
-                binary
-                    .context
-                    .i64_type()
-                    .const_int(i64::MAX as u64, false)
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "address",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        balance,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "balance",
-                    )
-                    .into(),
                 input.into(),
                 input_len.into(),
-            ],
-            "",
-        );
-
-        // We're not checking return value or returnDataSize;
-        // assuming precompiles always succeed
-
-        binary.builder.build_call(
-            binary.module.get_function("returnDataCopy").unwrap(),
-            &[
                 res.into(),
-                binary.context.i32_type().const_zero().into(),
-                binary.context.i32_type().const_int(hashlen, false).into(),
             ],
             "",
         );
@@ -1805,6 +2131,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
     }
 
     /// Emit event
+    /// TODO TODO TODO TODO
     fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
