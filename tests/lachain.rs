@@ -315,7 +315,7 @@ impl Externals for TestRuntime {
                     self.vm.memory = memory_ref;
                 }
 
-                match module.invoke_export("main", &[], self) {
+                match module.invoke_export("start", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                         TrapKind::Host(host_error) => {
                             assert!(
@@ -416,7 +416,7 @@ impl Externals for TestRuntime {
                     self.vm.memory = memory_ref;
                 }
 
-                let ret = match module.invoke_export("main", &[], self) {
+                let ret = match module.invoke_export("start", &[], self) {
                     Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                         TrapKind::Host(kind) => {
                             if format!("{}", kind) == "revert" {
@@ -654,7 +654,7 @@ impl TestRuntime {
             self.vm.memory = memory_ref;
         }
 
-        match module.invoke_export("main", &[], self) {
+        match module.invoke_export("start", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
                     assert!(
@@ -697,7 +697,7 @@ impl TestRuntime {
 
         self.vm.input = calldata;
 
-        match module.invoke_export("main", &[], self) {
+        match module.invoke_export("start", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
                     assert!(
@@ -732,7 +732,7 @@ impl TestRuntime {
             self.vm.memory = memory_ref;
         }
 
-        match module.invoke_export("main", &[], self) {
+        match module.invoke_export("start", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
                     if host_error.downcast_ref::<HostCodeRevert>().is_none() {
@@ -791,7 +791,7 @@ impl TestRuntime {
         self.vm.code.extend(calldata);
         self.vm.cur = address_new();
 
-        match module.invoke_export("main", &[], self) {
+        match module.invoke_export("start", &[], self) {
             Err(wasmi::Error::Trap(trap)) => match trap.kind() {
                 TrapKind::Host(host_error) => {
                     if host_error.downcast_ref::<HostCodeRevert>().is_some() {

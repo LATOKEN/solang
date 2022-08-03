@@ -3129,7 +3129,7 @@ impl EthAbiDecoder {
         if ns.target == Target::Lachain {
             // TODO: should we pass in a panic message?
             binary.builder.build_call(
-                binary.module.get_function("revert").unwrap(),
+                binary.module.get_function("set_return").unwrap(),
                 &[
                     binary
                         .context
@@ -3139,6 +3139,12 @@ impl EthAbiDecoder {
                         .into(),
                     binary.context.i32_type().const_zero().into(),
                 ],
+                "",
+            );
+    
+            binary.builder.build_call(
+                binary.module.get_function("system_halt").unwrap(),
+                &[binary.context.i32_type().const_int(1, false).into()],
                 "",
             );
 

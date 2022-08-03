@@ -194,9 +194,9 @@ impl LachainTarget {
         binary.builder.build_call(
             binary.module.get_function("copy_call_value").unwrap(),
             &[
-                args.into(),
                 binary.context.i32_type().const_zero().into(),
                 args_length.into(),
+                args.into(),
             ],
             "",
         );
@@ -763,7 +763,7 @@ impl LachainTarget {
         // create start function
         let ret = binary.context.void_type();
         let ftype = ret.fn_type(&[], false);
-        let function = binary.module.add_function("main", ftype, None);
+        let function = binary.module.add_function("start", ftype, None);
 
         // FIXME: If there is no constructor, do not copy the calldata (but check calldatasize == 0)
         let (argsdata, length) = self.deployer_prelude(binary, function, ns);
@@ -969,10 +969,10 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
     fn set_storage_string(
         &self,
-        _binary: &Binary<'a>,
+        binary: &Binary<'a>,
         _function: FunctionValue<'a>,
-        _slot: PointerValue<'a>,
-        _dest: BasicValueEnum<'a>,
+        slot: PointerValue<'a>,
+        dest: BasicValueEnum<'a>,
     ) {
         let len = binary.vector_len(dest);
         let data = binary.vector_bytes(dest);
@@ -1004,9 +1004,9 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
     fn get_storage_string(
         &self,
-        _binary: &Binary<'a>,
+        binary: &Binary<'a>,
         _function: FunctionValue,
-        _slot: PointerValue,
+        slot: PointerValue<'a>,
     ) -> PointerValue<'a> {
         let length = binary
             .builder
@@ -1541,7 +1541,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         args: &[BasicValueEnum<'b>],
         _gas: IntValue<'b>,
         value: Option<IntValue<'b>>,
-        _salt: Option<IntValue<'b>>,
+        salt: Option<IntValue<'b>>,
         _space: Option<IntValue<'b>>,
         ns: &ast::Namespace,
     ) {
@@ -2131,7 +2131,6 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
     }
 
     /// Emit event
-    /// TODO TODO TODO TODO
     fn emit_event<'b>(
         &self,
         binary: &Binary<'b>,
@@ -2172,7 +2171,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         }
 
         binary.builder.build_call(
-            binary.module.get_function("log").unwrap(),
+            binary.module.get_function("write_log").unwrap(),
             &[
                 data_ptr.into(),
                 data_len.into(),
@@ -2199,17 +2198,6 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         function: FunctionValue<'b>,
         ns: &ast::Namespace,
     ) -> BasicValueEnum<'b> {
-        macro_rules! straight_call {
-            ($name:literal, $func:literal) => {{
-                binary
-                    .builder
-                    .build_call(binary.module.get_function($func).unwrap(), &[], $name)
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
-            }};
-        }
-
         macro_rules! single_int_stack {
             ($name:literal, $func:literal, $width:expr) => {{
                 let value = binary
@@ -2233,57 +2221,186 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             }};
         }
 
-        macro_rules! single_address_stack {
-            ($name:literal, $func:literal) => {{
-                let value = binary.builder.build_alloca(binary.address_type(ns), $name);
+        match expr {
+            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
+                single_int_stack!("block_number", "get_block_number", 64)
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasleft, _) => {
+                single_int_stack!("gas_left", "get_gas_left", 64)
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::GasLimit, _) => {
+                single_int_stack!("gas_limit", "get_block_gas_limit", 64)
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
+                single_int_stack!("time_stamp", "get_block_timestamp", 64)
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockDifficulty, _) => {
+                single_int_stack!("block_difficulty", "get_block_difficulty", 256)
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Origin, _) => {
+                let result = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "origin");
 
                 binary.builder.build_call(
-                    binary.module.get_function($func).unwrap(),
+                    binary.module.get_function("get_tx_origin").unwrap(),
                     &[binary
                         .builder
                         .build_pointer_cast(
-                            value,
+                            result,
                             binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
                         .into()],
-                    $name,
+                    "origin",
                 );
 
-                binary.builder.build_load(value, $name)
-            }};
-        }
+                // decode result
+                let address = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "address");
 
-        match expr {
-            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
-                straight_call!("block_number", "getBlockNumber")
-            }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Gasleft, _) => {
-                straight_call!("gas_left", "getGasLeft")
-            }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::GasLimit, _) => {
-                straight_call!("gas_limit", "getBlockGasLimit")
-            }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
-                straight_call!("time_stamp", "getBlockTimestamp")
-            }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::BlockDifficulty, _) => {
-                single_int_stack!("block_difficulty", "getBlockDifficulty", 256)
-            }
-            codegen::Expression::Builtin(_, _, codegen::Builtin::Origin, _) => {
-                single_address_stack!("origin", "getTxOrigin")
+                binary.builder.build_call(
+                    binary.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                binary.builder.build_load(address, "origin")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Sender, _) => {
-                single_address_stack!("caller", "getCaller")
+                let result = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "caller");
+
+                binary.builder.build_call(
+                    binary.module.get_function("get_sender").unwrap(),
+                    &[binary
+                        .builder
+                        .build_pointer_cast(
+                            result,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into()],
+                    "caller",
+                );
+
+                // decode result
+                let address = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "address");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                binary.builder.build_load(address, "caller")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::BlockCoinbase, _) => {
-                single_address_stack!("coinbase", "getBlockCoinbase")
+                let result = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "coinbase");
+
+                binary.builder.build_call(
+                    binary.module.get_function("get_block_coinbase_address").unwrap(),
+                    &[binary
+                        .builder
+                        .build_pointer_cast(
+                            result,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into()],
+                    "coinbase",
+                );
+
+                // decode result
+                let address = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "address");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                binary.builder.build_load(address, "coinbase")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Gasprice, _) => {
-                single_int_stack!("gas_price", "getTxGasPrice", ns.value_length as u32 * 8)
+                single_int_stack!("gas_price", "get_tx_gas_price", ns.value_length as u32 * 8)
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Value, _) => {
-                single_int_stack!("value", "getCallValue", ns.value_length as u32 * 8)
+                single_int_stack!("value", "get_msgvalue", ns.value_length as u32 * 8)
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Calldata, _) => binary
                 .builder
@@ -2308,14 +2425,26 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             codegen::Expression::Builtin(_, _, codegen::Builtin::BlockHash, args) => {
                 let block_number = self.expression(binary, &args[0], vartab, function, ns);
 
+                let block_number_ptr = binary
+                    .builder
+                    .build_alloca(binary.context.i64_type(), "block_number");
+                binary.builder.build_store(block_number_ptr, block_number);
+
                 let value = binary
                     .builder
                     .build_alloca(binary.context.custom_width_int_type(256), "block_hash");
 
                 binary.builder.build_call(
-                    binary.module.get_function("getBlockHash").unwrap(),
+                    binary.module.get_function("get_block_hash").unwrap(),
                     &[
-                        block_number.into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                block_number_ptr,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "block_number",
+                            )
+                            .into(),
                         binary
                             .builder
                             .build_pointer_cast(
@@ -2331,16 +2460,16 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                 binary.builder.build_load(value, "block_hash")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
-                let value = binary
+                let result = binary
                     .builder
                     .build_alloca(binary.address_type(ns), "self_address");
 
                 binary.builder.build_call(
-                    binary.module.get_function("getAddress").unwrap(),
+                    binary.module.get_function("get_address").unwrap(),
                     &[binary
                         .builder
                         .build_pointer_cast(
-                            value,
+                            result,
                             binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
@@ -2348,12 +2477,45 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                     "self_address",
                 );
 
-                binary.builder.build_load(value, "self_address")
+                // decode result
+                let address = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "address");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                binary.builder.build_load(address, "self_address")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Balance, addr) => {
                 let addr = self
                     .expression(binary, &addr[0], vartab, function, ns)
-                    .into_array_value();
+                    .into_int_value();
 
                 let address = binary
                     .builder
@@ -2361,17 +2523,50 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
                 binary.builder.build_store(address, addr);
 
-                let balance = binary
+                // encode address
+                let address_r = binary
                     .builder
-                    .build_alloca(binary.value_type(ns), "balance");
+                    .build_alloca(binary.address_type(ns), "address_r");
 
                 binary.builder.build_call(
-                    binary.module.get_function("getExternalBalance").unwrap(),
+                    binary.module.get_function("__leNtobeN").unwrap(),
                     &[
                         binary
                             .builder
                             .build_pointer_cast(
                                 address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address_r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address_r",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                let balance = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "balance");
+
+                binary.builder.build_call(
+                    binary.module.get_function("get_external_balance").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address_r,
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
@@ -2393,7 +2588,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             codegen::Expression::Builtin(_, _, codegen::Builtin::ExtCodeSize, addr) => {
                 let addr = self
                     .expression(binary, &addr[0], vartab, function, ns)
-                    .into_array_value();
+                    .into_int_value();
 
                 let address = binary
                     .builder
@@ -2401,23 +2596,34 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
 
                 binary.builder.build_store(address, addr);
 
-                binary
+                let extcodesize = binary
                     .builder
-                    .build_call(
-                        binary.module.get_function("getExternalCodeSize").unwrap(),
-                        &[binary
+                    .build_alloca(binary.context.i32_type(), "extcodesize");
+
+                binary.builder.build_call(
+                    binary.module.get_function("get_extcodesize").unwrap(),
+                    &[
+                        binary
                             .builder
                             .build_pointer_cast(
                                 address,
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "",
                             )
-                            .into()],
-                        "code_size",
-                    )
-                    .try_as_basic_value()
-                    .left()
-                    .unwrap()
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                extcodesize,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "",
+                            )
+                            .into(),
+                    ],
+                    "extcodesize",
+                );
+
+                binary.builder.build_load(extcodesize, "extcodesize")
             }
             _ => unimplemented!("{:?}", expr),
         }

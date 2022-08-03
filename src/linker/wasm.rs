@@ -31,7 +31,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
     match target {
         Target::Lachain => {
             command_line.push(CString::new("--export").unwrap());
-            command_line.push(CString::new("main").unwrap());
+            command_line.push(CString::new("start").unwrap());
         }
         Target::Substrate { .. } => {
             command_line.push(CString::new("--export").unwrap());
@@ -81,7 +81,7 @@ pub fn link(input: &[u8], name: &str, target: Target) -> Vec<u8> {
                     let module_name = if imports[ind].field().starts_with("print") {
                         "debug"
                     } else {
-                        "ethereum"
+                        "env"
                     };
 
                     *imports[ind].module_mut() = module_name.to_owned();
