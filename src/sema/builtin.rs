@@ -29,7 +29,7 @@ pub struct Prototype {
 }
 
 // A list of all Solidity builtins functions
-static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
+static BUILTIN_FUNCTIONS: Lazy<[Prototype; 29]> = Lazy::new(|| {
     [
         Prototype {
             builtin: Builtin::Assert,
@@ -73,6 +73,17 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             ret: vec![Type::Void],
             target: vec![],
             doc: "Abort execution if argument evaulates to false. Report string when aborting",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::Return2,
+            namespace: None,
+            method: None,
+            name: "return2",
+            params: vec![Type::DynamicBytes],
+            ret: vec![Type::Unreachable],
+            target: vec![],
+            doc: "Stop execution and return data",
             constant: false,
         },
         Prototype {
@@ -311,6 +322,17 @@ static BUILTIN_FUNCTIONS: Lazy<[Prototype; 27]> = Lazy::new(|| {
             ret: vec![Type::Bool],
             target: vec![Target::Solana],
             doc: "ed25519 signature verification",
+            constant: false,
+        },
+        Prototype {
+            builtin: Builtin::Ecrecover,
+            namespace: None,
+            method: None,
+            name: "ecrecover",
+            params: vec![Type::Bytes(32), Type::Uint(32), Type::Bytes(32), Type::Bytes(32)],
+            ret: vec![Type::Address(true)],
+            target: vec![],
+            doc: "Recover the address associated with the public key from elliptic curve signature or return zero on error",
             constant: false,
         },
         Prototype {

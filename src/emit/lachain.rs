@@ -2395,7 +2395,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                 binary.builder.build_load(value, "block_hash")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::GetAddress, _) => {
-                let result = binary
+                let value = binary
                     .builder
                     .build_alloca(binary.address_type(ns), "self_address");
 
@@ -2404,7 +2404,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                     &[binary
                         .builder
                         .build_pointer_cast(
-                            result,
+                            value,
                             binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "",
                         )
@@ -2412,40 +2412,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                     "self_address",
                 );
 
-                // decode result
-                let address = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "address");
-
-                binary.builder.build_call(
-                    binary.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                result,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "result",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                address,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            )
-                            .into(),
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false)
-                            .into(),
-                    ],
-                    "",
-                );
-
-                binary.builder.build_load(address, "self_address")
+                binary.builder.build_load(value, "self_address")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Balance, addr) => {
                 let addr = self
@@ -2526,6 +2493,221 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                 );
 
                 binary.builder.build_load(extcodesize, "extcodesize")
+            }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::Ecrecover, args) => {
+                // hash
+                let hash_int = self
+                    .expression(binary, &args[0], vartab, function, ns)
+                    .into_int_value();
+                    
+                let hash = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "hash");
+                
+                binary.builder.build_store(hash, hash_int);
+
+                let hash_r = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "hash_r");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                hash,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "hash",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                hash_r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "hash_r",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.value_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                // v
+                let v = self
+                    .expression(binary, &args[1], vartab, function, ns)
+                    .into_int_value();
+
+                // r
+                let r_int = self
+                    .expression(binary, &args[2], vartab, function, ns)
+                    .into_int_value();
+                    
+                let r = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "r");
+                
+                binary.builder.build_store(r, r_int);
+
+                let r_r = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "r_r");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "r",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                r_r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "r_r",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.value_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                // s
+                let s_int = self
+                    .expression(binary, &args[3], vartab, function, ns)
+                    .into_int_value();
+                    
+                let s = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "s");
+                
+                binary.builder.build_store(s, s_int);
+
+                let s_r = binary
+                    .builder
+                    .build_alloca(binary.value_type(ns), "s_r");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__leNtobeN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                s,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "s",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                s_r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "s_r",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.value_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                // result
+                let result = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "result");
+
+                binary.builder.build_call(
+                    binary.module.get_function("crypto_recover").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                hash_r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "hash_r",
+                            )
+                            .into(),
+                        v
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                r_r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "r_r",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                s_r,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "s_r",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into()
+                    ],
+                    "result",
+                );
+
+                let address = binary
+                    .builder
+                    .build_alloca(binary.address_type(ns), "address");
+
+                binary.builder.build_call(
+                    binary.module.get_function("__beNtoleN").unwrap(),
+                    &[
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                result,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "result",
+                            )
+                            .into(),
+                        binary
+                            .builder
+                            .build_pointer_cast(
+                                address,
+                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                                "address",
+                            )
+                            .into(),
+                        binary
+                            .context
+                            .i32_type()
+                            .const_int(ns.address_length as u64, false)
+                            .into(),
+                    ],
+                    "",
+                );
+
+                binary.builder.build_load(address, "result")
             }
             _ => unimplemented!("{:?}", expr),
         }

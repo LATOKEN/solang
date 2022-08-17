@@ -55,6 +55,8 @@ pub enum Instr {
     Store { dest: Expression, pos: usize },
     /// Abort execution
     AssertFailure { expr: Option<Expression> },
+    /// Return dara
+    Return2 { expr: Option<Expression> },
     /// Print to log message
     Print { expr: Expression },
     /// Load storage (this is an instruction rather than an expression
@@ -175,6 +177,7 @@ impl Instr {
             | Instr::ClearStorage { storage: expr, .. }
             | Instr::Print { expr }
             | Instr::AssertFailure { expr: Some(expr) }
+            | Instr::Return2 { expr: Some(expr) }
             | Instr::PopStorage { storage: expr, .. }
             | Instr::AbiDecode { data: expr, .. }
             | Instr::SelfDestruct { recipient: expr }
@@ -274,6 +277,7 @@ impl Instr {
             }
 
             Instr::AssertFailure { expr: None }
+            | Instr::Return2 { expr: None }
             | Instr::Unreachable
             | Instr::Nop
             | Instr::Branch { .. }
@@ -902,6 +906,10 @@ impl ControlFlowGraph {
             Instr::AssertFailure { expr: None } => "assert-failure".to_string(),
             Instr::AssertFailure { expr: Some(expr) } => {
                 format!("assert-failure:{}", self.expr_to_string(contract, ns, expr))
+            }
+            Instr::Return2 { expr: None } => "return2".to_string(),
+            Instr::Return2 { expr: Some(expr) } => {
+                format!("return2:{}", self.expr_to_string(contract, ns, expr))
             }
             Instr::Call {
                 res,

@@ -19,6 +19,7 @@ impl AvailableExpressionSet {
             | Instr::ClearStorage { storage: expr, .. }
             | Instr::Print { expr }
             | Instr::AssertFailure { expr: Some(expr) }
+            | Instr::Return2 { expr: Some(expr) }
             | Instr::PopStorage { storage: expr, .. }
             | Instr::AbiDecode { data: expr, .. }
             | Instr::SelfDestruct { recipient: expr } => {
@@ -136,6 +137,7 @@ impl AvailableExpressionSet {
             }
 
             Instr::AssertFailure { expr: None }
+            | Instr::Return2 { expr: None }
             | Instr::Unreachable
             | Instr::Nop
             | Instr::Branch { .. }
