@@ -2156,6 +2156,27 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             }};
         }
 
+        macro_rules! single_address_stack {
+            ($name:literal, $func:literal) => {{
+                let value = binary.builder.build_alloca(binary.address_type(ns), $name);
+
+                binary.builder.build_call(
+                    binary.module.get_function($func).unwrap(),
+                    &[binary
+                        .builder
+                        .build_pointer_cast(
+                            value,
+                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                            "",
+                        )
+                        .into()],
+                    $name,
+                );
+
+                binary.builder.build_load(value, $name)
+            }};
+        }
+
         match expr {
             codegen::Expression::Builtin(_, _, codegen::Builtin::BlockNumber, _) => {
                 single_int_stack!("block_number", "get_block_number", 64)
@@ -2169,167 +2190,20 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             codegen::Expression::Builtin(_, _, codegen::Builtin::Timestamp, _) => {
                 single_int_stack!("time_stamp", "get_block_timestamp", 64)
             }
+            codegen::Expression::Builtin(_, _, codegen::Builtin::ChainId, _) => {
+                single_int_stack!("chain_id", "get_chain_id", 64)
+            }
             codegen::Expression::Builtin(_, _, codegen::Builtin::BlockDifficulty, _) => {
                 single_int_stack!("block_difficulty", "get_block_difficulty", 256)
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Origin, _) => {
-                let result = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "origin");
-
-                binary.builder.build_call(
-                    binary.module.get_function("get_tx_origin").unwrap(),
-                    &[binary
-                        .builder
-                        .build_pointer_cast(
-                            result,
-                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into()],
-                    "origin",
-                );
-
-                // decode result
-                let address = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "address");
-
-                binary.builder.build_call(
-                    binary.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                result,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "result",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                address,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            )
-                            .into(),
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false)
-                            .into(),
-                    ],
-                    "",
-                );
-
-                binary.builder.build_load(address, "origin")
+                single_address_stack!("origin", "get_tx_origin")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Sender, _) => {
-                let result = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "caller");
-
-                binary.builder.build_call(
-                    binary.module.get_function("get_sender").unwrap(),
-                    &[binary
-                        .builder
-                        .build_pointer_cast(
-                            result,
-                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into()],
-                    "caller",
-                );
-
-                // decode result
-                let address = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "address");
-
-                binary.builder.build_call(
-                    binary.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                result,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "result",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                address,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            )
-                            .into(),
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false)
-                            .into(),
-                    ],
-                    "",
-                );
-
-                binary.builder.build_load(address, "caller")
+                single_address_stack!("caller", "get_sender")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::BlockCoinbase, _) => {
-                let result = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "coinbase");
-
-                binary.builder.build_call(
-                    binary.module.get_function("get_block_coinbase_address").unwrap(),
-                    &[binary
-                        .builder
-                        .build_pointer_cast(
-                            result,
-                            binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                            "",
-                        )
-                        .into()],
-                    "coinbase",
-                );
-
-                // decode result
-                let address = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "address");
-
-                binary.builder.build_call(
-                    binary.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                result,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "result",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                address,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            )
-                            .into(),
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false)
-                            .into(),
-                    ],
-                    "",
-                );
-
-                binary.builder.build_load(address, "coinbase")
+                single_address_stack!("coinbase", "get_block_coinbase_address")
             }
             codegen::Expression::Builtin(_, _, codegen::Builtin::Gasprice, _) => {
                 single_int_stack!("gas_price", "get_tx_gas_price", ns.value_length as u32 * 8)
@@ -2417,7 +2291,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             codegen::Expression::Builtin(_, _, codegen::Builtin::Balance, addr) => {
                 let addr = self
                     .expression(binary, &addr[0], vartab, function, ns)
-                    .into_int_value();
+                    .into_array_value();
 
                 let address = binary
                     .builder

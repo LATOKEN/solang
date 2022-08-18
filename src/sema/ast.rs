@@ -1026,6 +1026,7 @@ pub enum Builtin {
     Slot,
     ProgramId,
     Timestamp,
+    ChainId,
     Calldata,
     Sender,
     Signature,

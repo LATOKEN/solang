@@ -103,6 +103,7 @@ fn test_builtin_conversion() {
         codegen::Builtin::Signature,
         codegen::Builtin::SignatureVerify,
         codegen::Builtin::Timestamp,
+        codegen::Builtin::ChainId,
         codegen::Builtin::TombstoneDeposit,
         codegen::Builtin::Value,
         codegen::Builtin::WriteAddress,
