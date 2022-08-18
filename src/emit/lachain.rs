@@ -2549,39 +2549,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                     "result",
                 );
 
-                let address = binary
-                    .builder
-                    .build_alloca(binary.address_type(ns), "address");
-
-                binary.builder.build_call(
-                    binary.module.get_function("__beNtoleN").unwrap(),
-                    &[
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                result,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "result",
-                            )
-                            .into(),
-                        binary
-                            .builder
-                            .build_pointer_cast(
-                                address,
-                                binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "address",
-                            )
-                            .into(),
-                        binary
-                            .context
-                            .i32_type()
-                            .const_int(ns.address_length as u64, false)
-                            .into(),
-                    ],
-                    "",
-                );
-
-                binary.builder.build_load(address, "result")
+                binary.builder.build_load(result, "result")
             }
             _ => unimplemented!("{:?}", expr),
         }
