@@ -1589,16 +1589,47 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         );
 
         // value is a u256
-        let value_ptr = binary
+        let value_be_ptr = binary
             .builder
             .build_alloca(binary.value_type(ns), "balance");
-
         binary.builder.build_store(
-            value_ptr,
+            value_be_ptr,
             match value {
                 Some(v) => v,
                 None => binary.value_type(ns).const_zero(),
             },
+        );
+        
+        let value_le_ptr = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
+        let type_size = binary.value_type(ns).size_of();
+
+        binary.builder.build_call(
+            binary.module.get_function("__be32toleN").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        value_be_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        value_le_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_int_truncate(type_size, binary.context.i32_type(), "size")
+                    .into(),
+            ],
+            "",
         );
 
         let result = binary
@@ -1622,7 +1653,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                         binary
                             .builder
                             .build_pointer_cast(
-                                value_ptr,
+                                value_le_ptr,
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "value_transfer",
                             )
@@ -1662,7 +1693,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                         binary
                             .builder
                             .build_pointer_cast(
-                                value_ptr,
+                                value_le_ptr,
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
                                 "value_transfer",
                             )
@@ -1764,10 +1795,42 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
         let ret;
 
         // value is a u256
-        let value_ptr = binary
+        let value_be_ptr = binary
             .builder
             .build_alloca(binary.value_type(ns), "balance");
-        binary.builder.build_store(value_ptr, value);
+        binary.builder.build_store(value_be_ptr, value);
+        
+        let value_le_ptr = binary
+            .builder
+            .build_alloca(binary.value_type(ns), "balance");
+        let type_size = binary.value_type(ns).size_of();
+
+        binary.builder.build_call(
+            binary.module.get_function("__be32toleN").unwrap(),
+            &[
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        value_be_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_pointer_cast(
+                        value_le_ptr,
+                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
+                        "",
+                    )
+                    .into(),
+                binary
+                    .builder
+                    .build_int_truncate(type_size, binary.context.i32_type(), "size")
+                    .into(),
+            ],
+            "",
+        );
 
         // gas is a u64
         let gas_ptr = binary
@@ -1800,7 +1863,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                     binary
                         .builder
                         .build_pointer_cast(
-                            value_ptr,
+                            value_le_ptr,
                             binary.context.i8_type().ptr_type(AddressSpace::Generic),
                             "value_transfer",
                         )
