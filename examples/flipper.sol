@@ -1,6 +1,10 @@
 contract A {
 	uint256 public value;
 
+	constructor() payable {
+		
+	}
+
 	/// Simply returns the current value of our `bool`.
 	function set() public payable {
 		value = msg.value;
@@ -10,8 +14,8 @@ contract A {
 contract flipper {
 	A public a;
 
-	function setA(address _a) public {
-		a = A(_a);
+	function setA() public payable {
+		a = new A{value: msg.value}();
 	}
 
 	/// A message that can be called on instantiated contracts.

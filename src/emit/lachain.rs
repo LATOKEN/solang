@@ -1632,10 +1632,6 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             "",
         );
 
-        let result = binary
-            .builder
-            .build_alloca(binary.address_type(ns), "result");
-
         let ret = binary.context.i32_type().const_zero();
         if let Some(salt) = salt {
             // salt is a u256
@@ -1671,9 +1667,9 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                         binary
                             .builder
                             .build_pointer_cast(
-                                result,
+                                address,
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "result",
+                                "address",
                             )
                             .into(),
                     ],
@@ -1703,9 +1699,9 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                         binary
                             .builder
                             .build_pointer_cast(
-                                result,
+                                address,
                                 binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                                "result",
+                                "address",
                             )
                             .into(),
                     ],
@@ -1716,35 +1712,6 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
                 .unwrap()
                 .into_int_value();
         }
-
-        // decode result
-        binary.builder.build_call(
-            binary.module.get_function("__beNtoleN").unwrap(),
-            &[
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        result,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "result",
-                    )
-                    .into(),
-                binary
-                    .builder
-                    .build_pointer_cast(
-                        address,
-                        binary.context.i8_type().ptr_type(AddressSpace::Generic),
-                        "address",
-                    )
-                    .into(),
-                binary
-                    .context
-                    .i32_type()
-                    .const_int(ns.address_length as u64, false)
-                    .into(),
-            ],
-            "",
-        );
 
         let is_success = binary.builder.build_int_compare(
             IntPredicate::EQ,
@@ -2394,7 +2361,7 @@ impl<'a> TargetRuntime<'a> for LachainTarget {
             codegen::Expression::Builtin(_, _, codegen::Builtin::ExtCodeSize, addr) => {
                 let addr = self
                     .expression(binary, &addr[0], vartab, function, ns)
-                    .into_int_value();
+                    .into_array_value();
 
                 let address = binary
                     .builder
