@@ -15,7 +15,7 @@ contract flipper {
 	A public a;
 
 	function setA() public payable {
-		a = new A{value: msg.value}();
+		a = new A{value: msg.value, salt: keccak256("hell")}();
 	}
 
 	/// A message that can be called on instantiated contracts.
