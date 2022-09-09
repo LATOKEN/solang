@@ -1,0 +1,16 @@
+{
+    // Используйте IntelliSense, чтобы узнать о возможных атрибутах.
+    // Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
+    // Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug UniswapV2Factory",
+            "program": "${workspaceFolder}/target/debug/solang",
+            "args": ["--target", "lachain", "-o",  "/Users/soloway2010/results", "/Users/soloway2010/sushiswap/uniswapv2/UniswapV2Factory.sol"],
+            "cwd": "${workspaceFolder}"
+        },
+    ]
+}

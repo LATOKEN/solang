@@ -45,6 +45,7 @@ fn test_builtin_conversion() {
         ast::Builtin::Signature,
         ast::Builtin::SignatureVerify,
         ast::Builtin::Timestamp,
+        ast::Builtin::ChainId,
         ast::Builtin::TombstoneDeposit,
         ast::Builtin::Value,
         ast::Builtin::WriteAddress,
