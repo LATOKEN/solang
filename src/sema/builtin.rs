@@ -437,7 +437,7 @@ static BUILTIN_VARIABLE: [Prototype; 15] = [
         name: "gasprice",
         args: &[],
         ret: &[Type::Value],
-        target: &[Target::default_substrate(), Target::Ewasm],
+        target: &[Target::default_substrate(), Target::Ewasm, Target::Lachain],
         doc: "gas price for one gas unit",
         constant: false,
     },
